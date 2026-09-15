@@ -23,11 +23,11 @@ if [[ ! -f $MANIFEST ]]; then
 fi
 
 workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
 # The build user has to be able to traverse into it.
 chmod 755 "$workdir"
-trap 'rm -rf "$workdir"' EXIT
 
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n $line ]]; do
     pkg=${line%%#*}                 # strip comments
     pkg=${pkg//[[:space:]]/}        # strip all whitespace
     [[ -n $pkg ]] || continue
