@@ -13,3 +13,9 @@ packages/**/*.src.tar.*
 
 # Repositorio binario: lo genera CI de cero en cada run.
 public/
+
+# SDD scratch (subagent-driven-development workspace)
+.superpowers/
+
+# Local container build output (scripts run in podman; see the plan, Task 3)
+.build-out/
