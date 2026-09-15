@@ -1,0 +1,9 @@
+# Build-only dependencies that live in the AUR, one per line.
+#
+# `makepkg --syncdeps` resolves the official repositories and nothing else, so
+# anything here has to be built from the AUR before the packages that need it.
+# These are installed into the build container and deliberately NOT published:
+# [amt911] serves this repo's own packages, not other people's.
+
+# makedepends of ttf-atkinson-hyperlegible-next-nerd{,-mono}-git
+font-patcher
