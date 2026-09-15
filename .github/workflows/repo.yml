@@ -1,0 +1,127 @@
+name: repo
+
+# No `pull_request` trigger, on purpose. This workflow may run on a
+# self-hosted runner on the maintainer's own hardware (see
+# docs/self-hosted-runner.md); a fork PR must never be able to execute code
+# there. Only pushes to main, the schedule, and a manual dispatch build.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'aur-makedeps.txt'
+      - 'scripts/**'
+      - '.github/workflows/repo.yml'
+  schedule:
+    # Both font packages are -git: their pkgver() follows upstream HEAD, so
+    # without a scheduled rebuild they freeze at whatever the last manual push
+    # produced. 04:00 UTC is the approved daily schedule.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Two Pages deployments would clobber each other. Queue instead of cancelling:
+# every run produces the complete repository, so a cancelled one wastes a full
+# font-patching build.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Repo variable, so switching to the mini-PC is a Settings change rather
+    # than a workflow edit — and switching back is just as fast when it is off.
+    runs-on: ${{ vars.BUILD_RUNNER || 'ubuntu-latest' }}
+    # Kept even on self-hosted: identical build in both places, and the host
+    # never accumulates makedepends (fontforge, toolchains) run after run.
+    container:
+      image: archlinux:base-devel
+      options: --memory=6g --memory-reservation=5g --memory-swap=6g --cpus=2
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Install build tooling
+        run: |
+          pacman -Syu --noconfirm --needed git namcap
+          git config --global --add safe.directory '*'
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Create the build user
+        run: |
+          useradd -m builder
+          printf 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman\n' > /etc/sudoers.d/builder
+          chmod 440 /etc/sudoers.d/builder
+
+      - name: Bootstrap AUR build-dependencies
+        run: ./scripts/build-aur-makedeps.sh
+
+      - name: Build packages
+        shell: bash
+        run: |
+          # nproc in the font recipes sees only these two allowed CPUs.
+          first_cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[,-]/); print a[1]}' /proc/self/status)
+          taskset -c "$first_cpu,$((first_cpu + 1))" ./scripts/build-packages.sh
+
+      - name: Import the signing key
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [[ -z $GPG_PRIVATE_KEY || -z $GPG_PASSPHRASE ]]; then
+            echo "::error::Both signing secrets are required; see docs/signing.md."
+            exit 1
+          fi
+          export GNUPGHOME
+          GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          fingerprints=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="sec" {primary=1; next} primary && $1=="fpr" {print $10; primary=0}')
+          if [[ ! $fingerprints =~ ^[A-F0-9]{40}$ ]]; then
+            echo "::error::Import exactly one dedicated primary signing key."
+            exit 1
+          fi
+          echo "SIGN_KEY=$fingerprints" >> "$GITHUB_ENV"
+
+      - name: Sign and assemble the repository
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./scripts/make-repo.sh
+
+      - name: Remove the private keyring
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -n ${GNUPGHOME:-} && -d $GNUPGHOME ]]; then
+            gpgconf --kill all
+            rm -rf -- "$GNUPGHOME"
+          fi
+
+      # Must precede the landing page: it is what defines steps.pages.outputs.
+      - uses: actions/configure-pages@v6
+        id: pages
+
+      - name: Render the landing page
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url || 'https://amt911.github.io/arch-packages' }}
+        run: ./scripts/make-index.sh
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          # Tars with --dereference, which is what turns repo-add's
+          # <repo>.db / <repo>.db.sig symlinks into the real files Pages needs.
+          path: public
+
+      - uses: actions/deploy-pages@v5
+        id: deployment

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Keeps checkout/configure-pages/upload-pages-artifact/deploy-pages current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Opens a PR when a packaged repo gets new commits. This is what keeps the
+  # submodule indirection from becoming a chore: the pointer bump arrives as a
+  # reviewable PR instead of something to remember.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: weekly
