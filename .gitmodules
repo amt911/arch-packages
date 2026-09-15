@@ -1,0 +1,16 @@
+[submodule "packages/config-saver"]
+	path = packages/config-saver
+	url = https://github.com/amt911/config-saver-aur.git
+	ignore = untracked
+[submodule "packages/dasik"]
+	path = packages/dasik
+	url = https://github.com/amt911/dasik-aur.git
+	ignore = untracked
+[submodule "packages/ttf-atkinson-hyperlegible-next-nerd-git"]
+	path = packages/ttf-atkinson-hyperlegible-next-nerd-git
+	url = https://github.com/amt911/ttf-atkinson-hyperlegible-nerd.git
+	ignore = untracked
+[submodule "packages/ttf-atkinson-hyperlegible-next-nerd-mono-git"]
+	path = packages/ttf-atkinson-hyperlegible-next-nerd-mono-git
+	url = https://github.com/amt911/ttf-atkinson-hyperlegible-mono-nerd.git
+	ignore = untracked
