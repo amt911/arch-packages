@@ -19,3 +19,6 @@ public/
 
 # Local container build output (scripts run in podman; see the plan, Task 3)
 .build-out/
+
+# Local architecture graph and generated review assets
+graphify-out/

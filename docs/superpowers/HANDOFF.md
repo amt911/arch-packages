@@ -1,121 +1,105 @@
-# Handoff — `[amt911]` Arch repository
+# Handoff — [amt911] Arch repository
 
-**Written 2026-09-15. Paste the prompt at the bottom into a fresh Claude Code session
-started in `/home/andres/repos/arch-packages`.**
+Updated 2026-09-15 after the user explicitly authorized continuing implementation.
+This replaces the earlier stop after Task 2. Work stays on `feat/arch-repo`.
+**Never push or merge. Stop before Task 11.**
 
----
+## Current state
 
-## Where the work stands
+Tasks 1–10 are implemented. Tasks 3–10 were completed locally from baseline `7ac4aa1`;
+no permitted Sonnet model was available, so implementation and review ran locally.
+The two previously untracked agent guides were preserved and updated for the real stack.
+See Git history for the continuation commits; no production deployment has happened.
 
-Branch **`feat/arch-repo`** (not `main`, not pushed). Six commits:
-
-| Commit | What |
+| Task | Result |
 | --- | --- |
-| `54c0a5f` | Design spec |
-| `3132671` | Implementation plan |
-| `8201f50` | `.gitignore` for `.superpowers/` and `.build-out/` |
-| `b18e950` | Plan fixes from the pre-flight conflict scan |
-| `02ed44f` | **Task 1** — the four submodules |
-| `86377fe` | **Task 2** — `aur-makedeps.txt` + `scripts/build-aur-makedeps.sh` |
+| 1–2 | Existing four pinned submodules and AUR bootstrap retained. Bootstrap cleanup and final-line parsing improved. |
+| 3 | `build-packages.sh`: real four-package build, explicit unsigned mode, required recipes, output-path guard, current product archives only. |
+| 4 | `make-repo.sh`: explicit loopback signatures, rebuilt databases, signature aliases, public-key export. |
+| 5 | `make-index.sh`: metadata table, safe links, downloads, light/dark CSS and pacman instructions. |
+| 6 | Workflow and Dependabot implemented; actionlint clean; no PR trigger. |
+| 7–9 | Spanish signing, usage and self-hosted runner guides, plus README and local verification recipe. |
+| 10 | CLAUDE.md and AGENTS.md updated together. Operational sections checked for parity. |
+| 11 | **Not executed. User-owned production setup and publication remain pending.** |
 
-**Tasks 1 and 2 are done and reviewed clean. Tasks 3–11 are not started.**
+## Evidence
 
-Working tree is clean. Nothing has been pushed; nothing has been merged.
+Actual local builds in disposable `archlinux:base-devel` containers produced:
 
-## The three documents that matter
+| Package | Version |
+| --- | --- |
+| config-saver | 3.4.0-1 |
+| dasik | 0.17.0-1 |
+| ttf-atkinson-hyperlegible-next-nerd-git | r17.7925f50-1 |
+| ttf-atkinson-hyperlegible-next-nerd-mono-git | r20.154d503-1 |
 
-1. **Spec** — `docs/superpowers/specs/2026-09-15-arch-repo-design.md`. The binding
-   authority. Every decision and its reasoning.
-2. **Plan** — `docs/superpowers/plans/2026-09-15-arch-repo.md`. Eleven tasks, each with
-   the complete file contents to write and real verification commands.
-3. **Ledger** — `.superpowers/sdd/2026-09-15-arch-repo/progress.md`. Git-ignored. Holds
-   the pre-flight conflict table, every ruling made so far, and the per-task completion
-   lines. **Read this before anything else** — it is the recovery map.
+- Final builder successfully rebuilt all four. Artifacts returned as user-owned files;
+  the host checkout and submodule pins remain unchanged.
+- Required memory ceiling verified inside the worker container: memory.max 6442450944,
+  memory.high 5368709120, memory.swap.max 0; `nproc` reported 2.
+- Disposable isolated GPG identity: all four packages and both databases verify.
+  No personal/production keyring inspected or used; test keyring removed afterward.
+- Pages-style tar dereferencing makes database and signature aliases regular files.
+- Fresh Arch container: local repository with `SigLevel = Required`, four products installed,
+  both CLI version/help commands and `python -m dasik --help` succeed.
+- Fontconfig discovers AtkynsonNext and AtkynsonMono Nerd Font; `pacman -Qk` reports
+  zero missing files for all four packages. Tampered package rejected for PGP signature failure.
+- ShellCheck, Bash parsing, actionlint, workflow trigger/order checks, documentation links,
+  shell examples and pacman snippet parity pass. Empty-input and unsafe-output guards exercised.
+- Index checked against actual archives and adversarial metadata: HTML escaped, unsafe URL
+  scheme omitted, description containing ` = ` preserved, local download links resolve.
+- Markdownlint: clean with MD013, MD032 and MD060 disabled for inherited long prose/tables
+  and list spacing. These are accepted formatting differences; default invocation is not clean.
 
-## What the thing is
+Local detailed logs and verification scripts remain under the ignored
+`.superpowers/sdd/2026-09-15-arch-repo/`. Artifacts and test-signed index are under
+`.build-out/`; **these use a throwaway key and must not be deployed**.
+[docs/build.md](../build.md) contains the reusable build recipe for a fresh clone.
 
-`amt911/arch-packages` becomes a signed pacman repository on GitHub Pages serving four
-personal packages, so `pacman -Syu` updates them with the rest of the system.
+## Rulings and review findings
 
-- PKGBUILDs stay in their own repos and enter here as **submodules** pinned to a SHA —
-  reproducible, and no second copy to keep in sync.
-- CI runs in `container: archlinux:base-devel`, bootstraps the one AUR-only build
-  dependency (`font-patcher`, needed by both font packages and absent from the official
-  repos), builds every submodule, signs everything with a dedicated GPG key, and deploys.
-- `runs-on: ${{ vars.BUILD_RUNNER || 'ubuntu-latest' }}` so the build moves to the user's
-  mini-PC by setting a repo variable, with no workflow edit.
+Earlier F0–F3 still apply: scratch ignored, shared PUBLIC contract with OUT override,
+read-only source mount with returned artifacts, and keeping results between validation stages.
+Additional implementation refinements:
 
-## Rulings made so far
+- Rootless Podman workers use a separate cgroup; bound the container as well as the wrapper.
+  This host lacks cpuset delegation, so use taskset instead of `--cpuset-cpus`.
+- `makepkg --packagelist` can announce an absent debug archive. Exclude debug companions;
+  only collect declared current product outputs, not a glob of stale package versions.
+- Missing recipes fail the build rather than silently producing a partial repository.
+- Workflow imports exactly one dedicated primary key after builds, requires both secrets,
+  uses a temporary root keyring and removes it after signing. Checkout credentials are not retained.
+- Signing documentation identifies the dedicated key explicitly instead of choosing the first
+  secret key in the user's keyring. Production key creation remains the user's task.
+- Docker is the documented supported runner backend. Podman is verified for local builds;
+  no claim that podman-docker alone makes GitHub job containers compatible.
+- Font family lookup uses the patched names, AtkynsonNext / AtkynsonMono.
+- AUR bootstrap trap and missing-final-newline findings fixed. Possible debug archives from
+  AUR remain container-only; this real font-patcher build emitted no debug companion.
+- Namcap remains advisory: first and final build finding counts match (config-saver 24,
+  dasik 91, each font recipe 2). Python-internal imports dominate; font recipes lack URL
+  metadata and explicit Git makedepends. Upstream packaging changes are separate work.
 
-Each was a real conflict found before execution, decided rather than escalated. All four
-are already applied to the plan and committed, so a fresh implementer inherits them.
+No independent subagent review ran due to the project's model restriction.
+Graphify generated a local graph of explicit file references only, not a full semantic
+analysis. No browser rendering check was run; HTML structure and links were checked.
+The production GitHub Actions environment and self-hosted runner still need their real runs.
 
-| # | Conflict | Ruling | Cost if wrong |
-| --- | --- | --- | --- |
-| F0 | `.superpowers/` was not git-ignored | Added it, plus `.build-out/` | None; both are scratch |
-| F1 | `build-packages.sh` took `OUT` while the other two scripts took `PUBLIC` — one pipeline, two knobs | Unified on `PUBLIC`, kept `OUT=${OUT:-$PUBLIC/x86_64}` as an override | A caller who sets only `OUT` still works |
-| F2 | Task 3's only real run happens inside a container on a copy, leaving nothing on the host for Tasks 4–5 — and Task 3's own Step 5 asserted exactly that | The container now returns `public/` through a writable `.build-out/` mount, `chown 0:0` so rootless podman maps it back to the invoking user | Only the local verification path; CI never uses podman |
-| F3 | Task 4 Step 6 deleted `/tmp/fakerepo`, which Task 5 Step 3 then read | Both now work against `.build-out/`; Step 6 keeps it | Local verification only |
+## What only the user does next
 
-## Deferred minor findings (Task 2)
+1. Follow [docs/signing.md](../signing.md): generate a dedicated production identity and load
+   `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE`.
+2. Set **Settings → Pages → Build and deployment → Source → GitHub Actions**.
+3. Review, merge and push the branch yourself. No agent has done either operation.
+4. Authorize Task 11 verification after publication. Follow [docs/usage.md](../usage.md)
+   on a target Arch machine, checking the production key fingerprint independently.
 
-Not fixed, by the skill's rules — minors never enter the fix loop. The final whole-branch
-review must triage them:
+Do not run the old plan's `git push origin main` as an agent instruction.
+Do not install packages or modify pacman configuration on the daily workstation to test.
 
-- The `trap` registers after `chmod 755`, not immediately after `mktemp -d`; leaks a temp
-  dir only if `chmod` fails.
-- `while read` drops a final line with no trailing newline if `aur-makedeps.txt` is
-  hand-edited badly. Not live today.
-- `pacman -U "$workdir/$pkg"/*.pkg.tar.*` would also install a `*-debug*` artifact if the
-  AUR PKGBUILD emits one. `font-patcher`'s PKGBUILD lives outside this repo; unverified.
+## Recovery documents
 
-## Constraints that bind whoever continues
-
-- **At most ONE subagent at a time. Never a model above Sonnet.** The user's standing rule.
-- Commit message bodies end with:
-  `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
-- **Never push, never merge.** The user does both.
-- `resources/` (216 MB ArchWiki dump) and `claude-md/` are git-ignored reference material.
-
-## Two things only the user can do
-
-Task 11 is blocked until both happen, and no agent should attempt either:
-
-1. **Generate the GPG signing key** and load `GPG_PRIVATE_KEY` + `GPG_PASSPHRASE` as repo
-   secrets. Task 7 writes the guide (`docs/signing.md`); the user runs the commands.
-2. **Settings → Pages → Build and deployment → Source → GitHub Actions.**
-
-## Heads-up on Task 3
-
-It is the first task that builds for real: a full `podman` run that patches every TTF with
-`fontforge` across `$(nproc)` processes. The plan wraps it in a memory cgroup
-(`systemd-run --user --scope -p MemoryHigh=5G -p MemoryMax=6G -p MemorySwapMax=0`). That
-is not decoration — an unbounded fan-out has taken this machine down before. Expect the
-run to take a while.
-
----
-
-## Prompt to paste into the fresh session
-
-> Continue executing `docs/superpowers/plans/2026-09-15-arch-repo.md` in
-> `/home/andres/repos/arch-packages`, on branch `feat/arch-repo`.
->
-> Read `docs/superpowers/HANDOFF.md` first, then the ledger at
-> `.superpowers/sdd/2026-09-15-arch-repo/progress.md`, then the spec at
-> `docs/superpowers/specs/2026-09-15-arch-repo-design.md`.
->
-> Tasks 1 and 2 are complete and reviewed clean — do not re-dispatch them. Resume at
-> **Task 3**, using the `superpowers:subagent-driven-development` skill: one implementer
-> subagent per task, a task review after each, then the broad final review.
->
-> Hard constraints: **one subagent at a time, never a model above Sonnet**. Never push,
-> never merge. End every commit body with
-> `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
->
-> The skill's helper scripts live in
-> `/home/andres/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/skills/subagent-driven-development/scripts/`
-> — use `task-brief`, `review-package` and `sdd-workspace` rather than pasting plan text
-> into dispatch prompts.
->
-> Stop before Task 11: it needs the user to create the GPG secrets and switch Pages to
-> the GitHub Actions source.
+1. This handoff.
+2. `.superpowers/sdd/2026-09-15-arch-repo/progress.md`, if present (ignored local ledger).
+3. [Approved spec](specs/2026-09-15-arch-repo-design.md).
+4. [Implementation plan](plans/2026-09-15-arch-repo.md), interpreted with the refinements above.
