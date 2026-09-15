@@ -1,0 +1,15 @@
+# Material de referencia local, no fuente del repo.
+# resources/ es un volcado de la ArchWiki (~216 MB); claude-md/ es una copia de
+# trabajo de amt911/claude-md. Ambos se consultan, no se versionan aquí.
+resources/
+claude-md/
+
+# Artefactos de makepkg dentro de los submódulos de packages/
+packages/*/src/
+packages/*/pkg/
+packages/**/*.pkg.tar.*
+packages/**/*.src.tar.*
+*.sig
+
+# Repositorio binario: lo genera CI de cero en cada run.
+public/
