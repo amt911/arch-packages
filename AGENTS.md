@@ -1,29 +1,19 @@
-# arch-packages — Codex Guide
+# arch-packages — Agent Guide
 
 `amt911/arch-packages` aggregates four personal Arch Linux packages into the planned signed
 `[amt911]` pacman repository on GitHub Pages, so Andrés can install and update them with pacman.
 This repository owns packaging orchestration; the application sources and PKGBUILDs have their
 own repositories.
 
-## Codex adapter
-
-This file is Codex's complete root guide, with the same project policy and template detail as
-`CLAUDE.md`; neither guide replaces the higher-priority instructions of the active session.
-References to `CLAUDE.md` in inherited governance mean the shared project rules in both guides.
-Claude's `Skill` and slash commands map to reading the available skill's `SKILL.md` and following
-its instructions with tools actually exposed to Codex; never invent a missing tool or model.
-Claude-specific headless CLI examples remain reference examples, not mandatory Codex commands.
-Keep the same one-subagent-total limit; if no allowed Sonnet model exists here, work locally.
-Never use the historical Claude co-author trailer to misattribute Codex work.
-Current task: implement the approved continuation through Task 10; no external deployment.
-
 ## Project authority, applicability and current stop
 
-Adapted from `claude-md/docs/starter-kit/CLAUDE.template.md`, the single canonical English
+Adapted from `claude-md/docs/starter-kit/AGENTS.template.md`, the single canonical English
 template. Its section order, governance, explanations and examples are retained; the six
 pnpm-monorepo preset sections are replaced with this project's stack. Local applicability notes
 and the rules below specialize inherited governance; they take precedence over generic examples.
-The companion `AGENTS.md` carries the same project policy for Codex. Keep both synchronized.
+This file is the **one** instruction file for every coding agent in this repo; `CLAUDE.md` only
+imports it (`@AGENTS.md`) for Claude Code — see
+[Agent compatibility](#agent-compatibility--codex-and-claude-code) below.
 
 **Current user scope (2026-09-15): continue the approved implementation through Task 10.**
 The user explicitly resumed the plan after the documentation-only stop. Tasks 3–10 now
@@ -95,6 +85,36 @@ remaining limitations. No push, merge or production deployment has been performe
 - **`docs/ENDPOINT_PERMISSIONS.md`** is the authoritative endpoint-permissions reference. Keep it
   current in the same change that adds or modifies endpoints.
 
+## Agent compatibility — Codex and Claude Code
+
+This file is `AGENTS.md`: the **one** instruction file for every coding agent in this repo. Codex
+reads it directly; Claude Code reads `CLAUDE.md`, which only imports this file (`@AGENTS.md`) and
+holds what applies to Claude alone. **Edit rules here, never in `CLAUDE.md`** — two copies of a
+rule drift apart on the first edit, and each agent then obeys a different one.
+
+| Concern | Claude Code | Codex |
+| --- | --- | --- |
+| Instruction file | `CLAUDE.md` → imports `AGENTS.md` | `AGENTS.md` (root down to the working directory) |
+| Invoke a skill | `Skill` tool, or `/<skill>` | mention it (`$<skill>`), or let it trigger from its description |
+| Skills on disk | `~/.claude/skills` (links into `~/.agents/skills`) | `.agents/skills`, then `~/.agents/skills` |
+| superpowers | `superpowers@claude-plugins-official` (`/plugin install`) | `superpowers@openai-curated` (install from `/plugins`; that id is its key in `~/.codex/config.toml`) |
+| MCP servers | `claude mcp add -s user <name> -- <cmd>` | `codex mcp add <name> -- <cmd>` (`~/.codex/config.toml`) |
+| File size | imports load whole | `project_doc_max_bytes`, **32 KiB by default** — raise it when this file is bigger, or the tail is silently dropped |
+
+- **Install shared skills once, for both agents:** `npx skills add <owner/repo> -g --skill <name>`
+  writes to `~/.agents/skills` and links it for Claude Code, so both run the same version.
+- **Names in this file are capabilities, not one agent's syntax.** "Invoke the `X` skill" means the
+  `Skill` tool in Claude Code and a skill mention in Codex. An MCP server named here is used when it
+  is registered for the agent you are running in; its absence never blocks ordinary work — this repo
+  has no MCP servers or extra skills wired beyond the defaults above, so never invent a tool or a
+  model that isn't actually exposed in the current session (the same rule the project overrides
+  above state for models applies to tools).
+- **Modes, model caps and Git rules bind both agents.** "lite mode", "normal mode" and "modo
+  desatendido" mean the same in Codex; a cap written as "no model above Sonnet" means "no model
+  above the mid tier" there. The one-subagent-total override above binds both agents equally.
+- **Claude-only commands** (`/graphify` and other slash commands that are not skills) are skipped by
+  Codex unless the same capability is installed as a skill in `~/.agents/skills`.
+
 ## ⚡ graphify — use every session
 
 ```text
@@ -129,7 +149,7 @@ approved spec.**
 
 User instructions always take precedence over skills; skills override default behavior. **Skills
 refine *how* the work is done; they never override the rules in this file. When a skill and this
-`CLAUDE.md` conflict, this file wins.**
+`AGENTS.md` conflict, this file wins.**
 
 ### Mode switch
 
@@ -247,10 +267,10 @@ Versions are committed PKGBUILD values at the baseline, not freshly built versio
 
 ### Technology ownership — what each part uses
 
-This is the operative technology map for **both CLAUDE.md and AGENTS.md**. The two guides
-instruct different agents working on the same stack; they do not prescribe different technologies.
-The application-framework examples retained later from the template are not technology choices
-for this project. Do not introduce them unless a new approved design changes the scope.
+This is the operative technology map for **`AGENTS.md`** — the one guide Codex and Claude Code both
+follow (Claude Code through the `CLAUDE.md` import); it does not prescribe different technologies
+per agent. The application-framework examples retained later from the template are not technology
+choices for this project. Do not introduce them unless a new approved design changes the scope.
 
 #### Root pipeline and publication
 
@@ -372,7 +392,7 @@ Use `git submodule status` to verify rather than treating this snapshot as a fut
 | `docs/signing.md` | User key creation, secrets, loss/rotation, export cleanup | Implemented, Task 7 |
 | `docs/usage.md` + `README.md` | Client setup, package installation, add/update packages | Implemented, Task 8 |
 | `docs/self-hosted-runner.md` | Mini-PC runner setup and security | Implemented, Task 9 |
-| `CLAUDE.md` + `AGENTS.md` | Equivalent project guides for Claude and Codex | Updated for Tasks 3–10 |
+| `AGENTS.md` + `CLAUDE.md` | Canonical agent guide for Codex and Claude Code; `CLAUDE.md` only imports it (`@AGENTS.md`) | Updated for Tasks 3–10; unified into one canonical guide (`docs/agents-md-ui-solid`) |
 | `docs/superpowers/` | Approved spec, plan and committed handoff | Present |
 | `.superpowers/` | Local SDD recovery ledger and scratch | Ignored; may be absent in another clone |
 | `.build-out/` | Local container results consumed by Tasks 4–5 | Ignored, generated on demand |
@@ -1061,6 +1081,11 @@ never merges anything) — but producing it on every PR is required.
   a finding, report it), and leaves a readable verdict. Because the agent is
   non-deterministic, it **never vetoes a merge on its own** — its value is coverage and a legible
   report, not gatekeeping.
+- **The verdict reads structure too.** Besides the packaging/build/install/signature smoke, it names
+  what the diff does to the
+  [Design principles](#design-principles--solid-applied-with-judgement) — a new violation (a script
+  that stopped isolating its side effects, a growing `case`/`if` chain) or a new speculative
+  abstraction. Findings, not a veto — like the rest of the pass.
 - **Cases come from the spec.** Draw the scenarios from the spec's `## Cases` / `## Casuísticas` block;
   tag them `[web]` / `[mobile]` when one spec covers both surfaces.
 - **Trigger.** It's the **last step of the superpowers pipeline, right after a PR exists**:
@@ -1186,6 +1211,50 @@ avoid writing ten lines (see *Working rules*).
 
 ---
 
+## Design principles — SOLID, applied with judgement
+
+> **Here:** the codebase is Bash orchestration (`scripts/*.sh`) plus vendored PKGBUILD submodules —
+> no application language, class hierarchy or DI framework exists. Only the **Shell** seam row
+> below applies; the template's "In UI code" subsection is dropped (this repo has no UI, class
+> `code`).
+
+SOLID is a list of **symptoms to look for**, not a pattern to apply. Every one of the five exists to
+keep a change local: the useful question is *how many files does the next plausible change touch, and
+how many of them do you have to understand first?* Applied by rote it produces the opposite — an
+interface per class, a factory for one product, an eight-file feature — so here it is bounded by YAGNI
+and by [Reuse first](#reuse-first--search-before-you-write).
+
+| Principle | Checkable smell | Usual fix |
+| --- | --- | --- |
+| **S — Single responsibility**: one reason to change | the description needs "and"; the file changes in PRs about unrelated features; a test mocks things unrelated to what it asserts; a component both fetches and lays out | split along the reason to change — IO, decision, presentation |
+| **O — Open/closed**: extend without editing | adding a case edits a growing `switch`/`if` chain in several places; one boolean prop per variant | a variants map, strategy, slot or registry — introduced at the second real case, not the first |
+| **L — Liskov substitution**: subtypes keep the contract | an override throws "not supported"; callers check the concrete type before calling; a variant drops the base's disabled, focus or semantics | narrow the base contract, or stop inheriting and compose |
+| **I — Interface segregation**: clients see only what they use | a fake implements methods the test never calls; a whole entity is passed to read two fields; a `Service` with fifteen methods | split by client need; pass the fields, not the bag |
+| **D — Dependency inversion**: policy does not import mechanism | domain or UI code imports `fetch`, the ORM, Retrofit, `Date.now()` or `fs` directly; a unit test needs a network or a database | depend on a port the caller owns (interface, function, hook); wire the adapter at the edge |
+
+### Where the seams go, per stack
+
+| Stack | Seams |
+| --- | --- |
+| Shell | one function per job; side effects (`rm`, package managers, network) isolated in named functions a dry-run flag can skip |
+
+### Where SOLID stops
+
+- **No interface, abstract class or factory without one of:** a second real implementation, an IO
+  boundary (network, database, filesystem, clock, randomness, OS), or a test that cannot be written
+  without the seam. "We might swap it later" is not on the list.
+- **Reuse first beats speculative extension points:** add the parameter to the existing thing before
+  inventing a plugin system for it.
+- **Speculative abstraction is a review finding**, exactly like a violation: an interface with one
+  implementation and no IO behind it gets inlined.
+- **Refactor toward SOLID when a change hurts**, in the PR that felt the pain — not as a drive-by
+  rewrite of code nobody is changing.
+- **Repos without their own executable code** (packaging, fonts, LaTeX, configuration data,
+  byte-matching decompilation) state the exemption in one line under *Working rules*. Not this repo:
+  the four `scripts/*.sh` are executable orchestration logic, so the table above applies.
+
+---
+
 ## Working rules
 
 - **Heavy or parallel jobs run inside a memory cgroup** — never launch a suite, build or
@@ -1200,6 +1269,12 @@ avoid writing ten lines (see *Working rules*).
   `the shared UI directory (web example only)`, shared logic and contracts in `packages/shared`). A deliberate duplicate
   is a sentence in the PR, not a default. See
   [Reuse first — search before you write](#reuse-first--search-before-you-write).
+- **SOLID where it pays, not by rote** — split by reason to change, extend through named functions
+  or a case/dispatch table instead of a growing `if` chain, keep interfaces and function arguments
+  narrow, and push IO (filesystem, subprocess/network calls, package managers) behind small
+  functions a dry-run flag can skip. No abstraction without a second implementation, an IO
+  boundary or a test seam. See
+  [Design principles](#design-principles--solid-applied-with-judgement).
 - **TDD by default** for new logic. Don't merge logic without tests.
 - **Every user-facing flow ships with a Playwright E2E** that drives the running app against the real
   API. Unit tests green ≠ it works — the recurring failure mode is a feature that renders fine and
@@ -1225,7 +1300,7 @@ avoid writing ten lines (see *Working rules*).
 - **Email & storage via their transport/driver** — never provider-coupled; the API serves signed URLs,
   not binaries.
 - **Keep this file's Stack/Architecture section current** — when you ship something previously marked
-  "planned", update the Stack tables and module list in the same change. A stale `CLAUDE.md` misleads
+  "planned", update the Stack tables and module list in the same change. A stale `AGENTS.md` misleads
   the next session.
 - **UI work → design context first, then `impeccable` + superpowers** — for any UI/frontend change,
   invoke the `impeccable` skill (and its sub-skills: `shape`, `polish`, `critique`, etc.). First, if
