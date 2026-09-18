@@ -14,3 +14,7 @@
 	path = packages/ttf-atkinson-hyperlegible-next-nerd-mono-git
 	url = https://github.com/amt911/ttf-atkinson-hyperlegible-mono-nerd.git
 	ignore = untracked
+[submodule "packages/envycontrol"]
+	path = packages/envycontrol
+	url = https://github.com/amt911/envycontrol-aur.git
+	ignore = untracked

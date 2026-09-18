@@ -42,7 +42,8 @@ systemctl --user show arch-packages-build.scope -p MemoryHigh -p MemoryMax -p Me
 Podman puede ejecutar el contenedor en otro cgroup. Comprueba los límites dentro del
 contenedor, no solo los del wrapper. [Detalles del host](FINDINGS.md).
 
-Deben salir cuatro archivos `.pkg.tar.zst` en `.build-out/x86_64/`, propiedad del usuario.
+Debe salir un archivo `.pkg.tar.zst` por paquete de `packages/` en `.build-out/x86_64/`,
+propiedad del usuario.
 Antes de repetir una publicación local, usa un directorio de salida limpio para no
 mezclar versiones antiguas. No publiques `.build-out/`: es material de prueba.
 
