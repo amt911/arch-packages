@@ -1,6 +1,6 @@
 # arch-packages — Agent Guide
 
-`amt911/arch-packages` aggregates four personal Arch Linux packages into the planned signed
+`amt911/arch-packages` aggregates five personal Arch Linux packages into the planned signed
 `[amt911]` pacman repository on GitHub Pages, so Andrés can install and update them with pacman.
 This repository owns packaging orchestration; the application sources and PKGBUILDs have their
 own repositories.
@@ -221,16 +221,19 @@ numbers you'd trust by mistake.
    source HEAD consumed by the two `-git` font packages, nor the rolling container/AUR inputs.
    Their `pkgver()` derives the commit count and short SHA at build time.
 3. **HTTPS submodule URLs** remain in `.gitmodules`; a local SSH `insteadOf` preference belongs
-   in user Git configuration. All four entries currently use `ignore = untracked` (the spec
-   highlighted the fonts, but the actual implementation applies it to all four).
+   in user Git configuration. Every entry uses `ignore = untracked` (the spec highlighted
+   the fonts; the implementation applies it to all of them, and `add-package.sh` keeps it so).
 4. **Keep upstream repositories alive.** `dasik-aur` releases feed `iso-bootstrap.sh`;
    `config-saver-aur` has its own packaging CI (preparation/static checks, not a full install smoke
    in the checked-in workflow). This root aggregates, it does not replace them.
 5. **Standalone Bash scripts own the pipeline**, not inline workflow logic or a new shared library.
-   The plan deliberately uses four short scripts; `make-repo.sh` owns signing and database assembly.
+   The plan deliberately uses four short pipeline scripts; `make-repo.sh` owns signing and database
+   assembly. Three maintenance scripts sit beside them and never run as part of a publish:
+   `add-package.sh`, `update-package.sh` and `check-packages.sh` (the last one is the exception —
+   the workflow runs it as a pre-flight check). See `docs/packages.md`.
 6. **AUR build dependencies are not products.** `aur-makedeps.txt` currently lists `font-patcher`.
    `makepkg --syncdeps` resolves official repositories only. Bootstrap the listed AUR packages
-   in the disposable build container, then build the four products. Do not publish `font-patcher`
+   in the disposable build container, then build the products. Do not publish `font-patcher`
    or introduce `paru`/`yay` just to resolve it.
 
 ---
@@ -246,7 +249,7 @@ Versions below are the approved plan's baseline, not a claim of installed or lat
 | GnuPG | 2.4 in plan | Dedicated signing identity; production setup belongs to user |
 | namcap | Arch package | Advisory PKGBUILD/package diagnostics in the root build |
 | ShellCheck | Available validation tool | Root scripts must be clean; justify individual suppressions |
-| Git submodules | Four pinned Gitlinks | Implemented; own packaging repos remain authoritative |
+| Git submodules | Five pinned Gitlinks | Implemented; own packaging repos remain authoritative |
 | Arch Linux container | `archlinux:base-devel` | Container build environment on hosted/self-hosted runners |
 | Podman + systemd cgroups | Local validation | Disposable build/install tests; mandatory memory ceiling |
 | GitHub Actions + Pages | Implemented Task 6 | Build/sign/deploy `public/`; workflow exists; deployment pending |
@@ -255,13 +258,16 @@ Versions below are the approved plan's baseline, not a claim of installed or lat
 
 ### Packages (`packages/`)
 
-All four declare `arch=('any')`; the planned repository serves them under `x86_64/`.
+All declare `arch=('any')`; the planned repository serves them under `x86_64/`.
+`scripts/check-packages.sh` enforces the directory-equals-`pkgname` rule and the served
+architectures; `scripts/add-package.sh` and `scripts/update-package.sh` own alta and pin moves.
 Versions are committed PKGBUILD values at the baseline, not freshly built versions.
 
 | Directory / pkgname | Upstream packaging repository under `amt911/` | Version | Source |
 | --- | --- | --- | --- |
 | `config-saver` | `config-saver-aur` | `3.4.0-1` | Release tag tarball |
-| `dasik` | `dasik-aur` | `0.17.0-1` | Git source pinned to tag; `check()` runs compileall |
+| `dasik` | `dasik-aur` | `0.19.0-1` | Git source pinned to tag; `check()` runs compileall |
+| `envycontrol` | `envycontrol-aur` | `3.6.0-1` | Git source pinned to tag of the personal fork |
 | `ttf-atkinson-hyperlegible-next-nerd-git` | `ttf-atkinson-hyperlegible-nerd` | `r17.7925f50-1` | Google Fonts upstream HEAD; AUR `font-patcher` |
 | `ttf-atkinson-hyperlegible-next-nerd-mono-git` | `ttf-atkinson-hyperlegible-mono-nerd` | `r20.154d503-1` | Google Fonts upstream HEAD; AUR `font-patcher` |
 
@@ -277,11 +283,13 @@ choices for this project. Do not introduce them unless a new approved design cha
 | Component | Technologies to use | Purpose / artifact | State |
 | --- | --- | --- | --- |
 | `scripts/build-aur-makedeps.sh` | Bash, Git over HTTPS, makepkg, sudo, pacman | Read `aur-makedeps.txt`, clone AUR build dependencies, build as `builder`, install only inside the build container | Implemented |
-| `scripts/build-packages.sh` | Bash, makepkg, pacman dependency resolution, namcap, standard filesystem tools | Build all four pinned packaging recipes unsigned; collect `.pkg.tar.zst`; namcap findings advisory | Implemented, Task 3 |
+| `scripts/build-packages.sh` | Bash, makepkg, pacman dependency resolution, namcap, standard filesystem tools | Build every pinned packaging recipe unsigned; collect `.pkg.tar.zst`; namcap findings advisory | Implemented, Task 3 |
 | `scripts/make-repo.sh` | Bash, GnuPG, repo-add, symbolic links | Detached signatures, `.db.tar.zst` / `.files.tar.zst`, `.db.sig` / `.files.sig` aliases, armored public key | Implemented, Task 4 |
 | `scripts/make-index.sh` | Bash, bsdtar, awk, sed, stat, HTML5 and plain CSS | Extract `.PKGINFO`, escape metadata, render package table and setup instructions into `public/index.html` | Implemented, Task 5 |
+| `scripts/check-packages.sh` | Bash, git, pacman query | Enforce the packages/ invariants before anything expensive runs; advisory AUR-makedep warnings | Implemented |
+| `scripts/add-package.sh`, `scripts/update-package.sh` | Bash, git submodules, optional `gh` | Alta and pin moves in one command, validated and rolled back on failure | Implemented |
 | Landing page | Static HTML/CSS, system fonts, CSS custom properties and `prefers-color-scheme` | Responsive document with light/dark styles, served directly by Pages; no JavaScript build or browser application runtime in the plan | Implemented, Task 5 |
-| `.github/workflows/repo.yml` | GitHub Actions YAML, `archlinux:base-devel`, the four shell scripts, official Pages actions | Full build/sign/upload/deploy; same container on hosted or self-hosted runner | Implemented, Task 6 |
+| `.github/workflows/repo.yml` | GitHub Actions YAML, `archlinux:base-devel`, `check-packages.sh` plus the four pipeline scripts, official Pages actions | Full build/sign/upload/deploy; same container on hosted or self-hosted runner | Implemented, Task 6 |
 | `.github/dependabot.yml` | Dependabot YAML, `github-actions` and `gitsubmodule` ecosystems | Weekly action-version and packaging-pointer update PRs | Implemented, Task 6 |
 | Local build verification | Rootless Podman, disposable Arch container, systemd memory cgroups | Execute the actual pipeline without modifying host packages; return artifacts via `.build-out/` | Recipe approved; local build verified |
 | Local static verification | Bash syntax checks, ShellCheck; actionlint for workflow YAML | Check the actual shell/YAML surface; no root hooks installed | ShellCheck and actionlint verified |
@@ -369,7 +377,8 @@ internals or transitive AUR dependencies. Update this map whenever an authorized
 script or architecture change lands, and keep planned components marked until verified.
 
 Current pins: `config-saver` = `f900443773b241896b3ffc72198f14fbf62880a6`;
-`dasik` = `3273f3d38ce540013ba12e1b3e38738dcb56b1a4`;
+`dasik` = `fdcc7a7c80829f02f7846a434cf073b976ce1882`;
+`envycontrol` = `8f4cae97b8a68c4222e5553298ad3eeea26c4fe0`;
 regular font = `f625aa331e3433fb882006a1eb43d8bca5b971aa`;
 mono font = `2bb3859f7ff49e13989dcb596128d890d47432a5`.
 Use `git submodule status` to verify rather than treating this snapshot as a future constraint.
@@ -380,15 +389,19 @@ Use `git submodule status` to verify rather than treating this snapshot as a fut
 
 | Path | Responsibility | Baseline state |
 | --- | --- | --- |
-| `.gitmodules` + `packages/` | Four package submodules | Implemented, Task 1 |
+| `.gitmodules` + `packages/` | Package submodules, one directory per `pkgname` | Implemented, Task 1; `envycontrol` added later |
 | `.gitignore` | Reference material, build products and scratch exclusions | Implemented |
 | `aur-makedeps.txt` | Newline-separated AUR build dependencies, `#` comments | Implemented, Task 2 |
 | `scripts/build-aur-makedeps.sh` | Root orchestrator, unprivileged AUR makepkg, container install | Implemented, Task 2 |
 | `scripts/build-packages.sh` | Build all PKGBUILDs unsigned; namcap advisory; collect archives | Implemented, Task 3 |
 | `scripts/make-repo.sh` | Sign archives, repo-add, sign databases, export public key | Implemented, Task 4 |
 | `scripts/make-index.sh` | Escaped HTML from package `.PKGINFO`, versions/sizes/links/setup | Implemented, Task 5 |
-| `.github/workflows/repo.yml` | Container, triggers, four scripts and Pages deployment | Implemented, Task 6 |
+| `scripts/check-packages.sh` | Validate `packages/`: submodule registered, dir == `pkgname`, served arch, AUR makedeps | Implemented; workflow pre-flight |
+| `scripts/add-package.sh` | One-command alta: submodule, `ignore = untracked`, validation, staged Gitlink, rollback | Implemented |
+| `scripts/update-package.sh` | Move one pin to a reviewed tag/branch/SHA, re-validate, stage the Gitlink | Implemented |
+| `.github/workflows/repo.yml` | Container, triggers, pre-flight check, four pipeline scripts and Pages deployment | Implemented, Task 6 |
 | `.github/dependabot.yml` | Weekly Actions and submodule updates | Implemented, Task 6 |
+| `docs/packages.md` | Packaging-repo map, alta, pin moves, checks, removal | Implemented |
 | `docs/signing.md` | User key creation, secrets, loss/rotation, export cleanup | Implemented, Task 7 |
 | `docs/usage.md` + `README.md` | Client setup, package installation, add/update packages | Implemented, Task 8 |
 | `docs/self-hosted-runner.md` | Mini-PC runner setup and security | Implemented, Task 9 |
@@ -410,7 +423,7 @@ public/
     ├── amt911.db.tar.zst            # with detached signature
     ├── amt911.files -> amt911.files.tar.zst
     ├── amt911.files.tar.zst         # with detached signature
-    ├── *.pkg.tar.zst               # four products, current versions only
+    ├── *.pkg.tar.zst               # one per package, current versions only
     └── *.sig                      # package/database signatures and applicable aliases
 ```
 
@@ -845,7 +858,7 @@ construction**, because none of them show up as a failure, a warning, or a cover
 | masked exit status | `\|\| true`, advisory namcap treated as proof, or a later successful command hides failure | Yes: assert required stage exit codes directly; namcap is explicitly advisory |
 | asynchronous shell work never waited for | Child fails after the parent reports success | Possible in shell/FontForge orchestration; collect child status |
 | permissive stand-ins | Mocked makepkg/pacman/GPG always succeeds | Such stubs cannot replace real container acceptance |
-| expectation computed like the code | Expected package list comes from the same faulty glob | Compare against the explicit four expected product names and independent metadata |
+| expectation computed like the code | Expected package list comes from the same faulty glob | Compare against the explicit expected product names and independent metadata |
 
 No root suite has been run with deliberately broken assertions yet; that measurement is pending.
 JS snapshots and coroutine-runtime assertions are not part of this shell stack.
@@ -895,21 +908,26 @@ shellcheck scripts/*.sh
 A fresh clone needs `git submodule update --init --recursive` before a build. Do not run
 `git submodule update --remote` as a build step: that changes the pinned packaging input.
 
-### Updating a package pointer (only when requested)
-
-For example, after `dasik-aur` has published the desired packaging revision:
+### Adding a package and updating a pointer (only when requested)
 
 ```bash
-git -C packages/dasik fetch origin
-git -C packages/dasik checkout --detach origin/main
-git diff --submodule=log -- packages/dasik
+./scripts/add-package.sh <pkgname> [git-url]   # default URL: amt911/<pkgname>-aur
+./scripts/update-package.sh <pkgname> [ref]    # ref defaults to the packaging repo's HEAD
+./scripts/check-packages.sh                    # the same validation both of them run
 ```
 
-Select the intended fetched tag or SHA instead of `origin/main` when updating to a release;
-review the revision before committing the root Gitlink. Publishing the upstream revision is a
-separate user action. Add a new package with `git submodule add` using its HTTPS repository URL
-and a `packages/` directory equal to `pkgname`; review its pin and AUR dependencies. The planned
-pipeline discovers `packages/*/PKGBUILD`; never edit the workflow per package.
+Both scripts stage the Gitlink and stop there: review with `git diff --cached --submodule=log`
+and commit yourself. `add-package.sh` rolls the whole addition back when validation fails, so a
+rejected package leaves no half-written `.gitmodules` section. `--create` (with optional
+`--from-aur`) creates the packaging repository on GitHub and pushes the seed recipe to it —
+that is a push to the NEW repository only; the never-push rule for this repository is unchanged,
+and it needs the user's authorization like any other outward-facing action.
+
+Do not hand-roll `git submodule add` or `git submodule update --remote`: the first skips the
+`ignore = untracked` setting and the directory-equals-`pkgname` check, the second silently
+follows a branch instead of pinning a reviewed revision. Publishing the upstream revision is a
+separate user action. The pipeline discovers `packages/*/PKGBUILD`; never edit the workflow per
+package. Full flow and edge cases: `docs/packages.md`.
 
 ### Full local build
 
@@ -943,7 +961,7 @@ user's production identity. An unsigned debug repository must never be deployed.
 | --- | --- |
 | Guide only | Template comparison, policy parity, links, placeholder and whitespace checks |
 | Root shell scripts | `bash -n`, `shellcheck scripts/*.sh`, relevant error paths and real container run |
-| Package build | Four product archives, correct `.PKGINFO`, clean makepkg, namcap no worse |
+| Package build | One product archive per package, correct `.PKGINFO`, clean makepkg, namcap no worse |
 | Signing / repo assembly | Verify package and database signatures, tar contents, public key, empty-input failure |
 | HTML index | Actual package metadata, escaped output, valid links and matching pacman setup snippet |
 | Workflow (once present) | `actionlint` or container equivalent below; verify step order and failure behavior |
@@ -972,7 +990,7 @@ configure Pages → generate index → upload `public/` → deploy Pages.
 
 **Signing refinement over the spec's original example:** makepkg runs unsigned as `builder`.
 The private key never enters builder's keyring; root signs afterward with explicit loopback
-pinentry and passphrase file descriptor. The fourth script `make-repo.sh` also keeps repo-add
+pinentry and passphrase file descriptor. The pipeline's fourth script `make-repo.sh` also keeps repo-add
 out of YAML. Do not restore the older `makepkg --sign` example from the spec/handoff.
 
 The root workflow must fail if a package build fails, no PKGBUILDs exist, no archives are produced,
@@ -1178,7 +1196,7 @@ Record all three in this file, not in a session — the point is that the next s
 > **Here:** search `scripts/`, `aur-makedeps.txt`, `.gitmodules`, the approved plan and each
 > package's existing PKGBUILD before adding orchestration. There is no `packages/shared`, UI
 > directory or `package.json` in this root; references below are the inherited web example.
-> Keep the approved four standalone scripts; do not create a shared library for incidental
+> Keep the approved four standalone pipeline scripts; do not create a shared library for incidental
 > similarity. The usage snippet/page duplication is deliberate and checked for parity.
 
 The default failure mode of an agent (and of a tired human) is to write the thing that already
@@ -1251,7 +1269,7 @@ and by [Reuse first](#reuse-first--search-before-you-write).
   rewrite of code nobody is changing.
 - **Repos without their own executable code** (packaging, fonts, LaTeX, configuration data,
   byte-matching decompilation) state the exemption in one line under *Working rules*. Not this repo:
-  the four `scripts/*.sh` are executable orchestration logic, so the table above applies.
+  the `scripts/*.sh` files are executable orchestration logic, so the table above applies.
 
 ---
 

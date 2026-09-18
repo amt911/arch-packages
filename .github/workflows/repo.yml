@@ -62,6 +62,11 @@ jobs:
           printf 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman\n' > /etc/sudoers.d/builder
           chmod 440 /etc/sudoers.d/builder
 
+      # Cheap, and it runs before the expensive steps: a mismatched pkgname or
+      # an uninitialised submodule fails here instead of after a font build.
+      - name: Check the packages tree
+        run: ./scripts/check-packages.sh
+
       - name: Bootstrap AUR build-dependencies
         run: ./scripts/build-aur-makedeps.sh
 

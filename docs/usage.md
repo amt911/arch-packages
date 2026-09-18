@@ -1,6 +1,6 @@
 # Instalar desde [amt911]
 
-Repositorio para Arch Linux x86_64. Los cuatro paquetes son `any`, pero se sirven
+Repositorio para Arch Linux x86_64. Todos los paquetes son `any`, pero se sirven
 bajo `x86_64/`. Requiere un primer despliegue correcto; crear los ficheros del proyecto
 no publica el servicio.
 
